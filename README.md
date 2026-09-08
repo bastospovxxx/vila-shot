@@ -1,47 +1,57 @@
-# Vila RP — v0.2
+# Vila RP v0.3 — Mundo Online
 
-Primeira reconstrução do protótipo com foco em sensação de jogo, mobile e multiplayer.
+Protótipo jogável em HTML/CSS/JavaScript para GitHub Pages + Firebase.
 
-## Incluído
-- Canvas 2D pixel-art responsivo
-- Mundo procedural infinito por chunks
-- 6 biomas: planície, floresta, deserto, tundra, pântano e montanha
-- Dia/noite
-- Mobs noturnos
-- Mineração e colocação de blocos
-- Bedrock na última camada
-- Água e lava como blocos líquidos básicos
-- Minérios
-- Inventário 32 slots + hotbar
-- Crafting rápido
-- Chat global
-- Lista de jogadores online
-- Firebase Authentication + Realtime Database
-- Salvamento local e presença online
-- Controles desktop e celular
+## O que mudou nesta versão
+
+- O mundo **abre antes do Firebase**. Uma falha de conexão não deixa mais o jogador preso na tela de login.
+- Firebase fica em segundo plano para presença, chat e edições do mundo.
+- Mundo procedural por chunks, com 8 regiões/biomas.
+- Dia/noite com iluminação, estrelas e mudança de céu.
+- Terreno profundo com pedra, ardósia e bedrock na última camada.
+- Minérios: carvão, ferro, ouro, diamante e esmeralda.
+- Água e lava com simulação celular leve.
+- Mundo destrutível e blocos colocáveis.
+- Inventário de 32 slots e hotbar de 8 slots.
+- Crafting rápido.
+- Mobs noturnos: slime, zumbi e morcego.
+- Vida, dano, respawn e combate simples.
+- Multiplayer de presença em tempo real.
+- Chat global.
+- Salvamento local para não perder a posição quando o Firebase estiver indisponível.
+- Controles PC e mobile.
 
 ## Firebase
-No console Firebase:
-1. Authentication → Método de login → ative **Anônimo**.
-2. Para contas com nome/senha, ative **E-mail/senha**.
-3. Realtime Database já está configurado no código com a URL do seu projeto.
-4. Cole `firebase-rtdb-rules.json` nas regras do Realtime Database durante os testes.
 
-> IMPORTANTE: as regras acima são de protótipo e permitem leitura pública. Antes de abrir para o público, vamos trocar por regras seguras e validar tudo pelo `auth.uid`.
+A configuração do projeto está em `js/firebase.js`.
+
+### Authentication
+
+Para contas com nome + senha, ative no Firebase Authentication:
+
+**Authentication → Método de login → E-mail/senha → Ativar**
+
+O login anônimo também deve permanecer ativado.
+
+### Realtime Database
+
+Use o conteúdo de `firebase-rtdb-rules.json` em:
+
+**Realtime Database → Regras**
+
+As regras desta versão não deixam o banco totalmente público para escrita.
 
 ## GitHub Pages
-Suba o conteúdo desta pasta na raiz do repositório e ative Settings → Pages → Deploy from branch → main → /root.
 
-## Próximo update
-- Sistema de chunks persistentes no Firebase
-- Água/lava com propagação por células
-- Ferramentas e durabilidade
-- Sistema de dano/PvP
-- Mais mobs e IA
-- Casas/NPCs/lojas
-- Biomas mais distintos
-- Iluminação por blocos
-- Cavernas
-- Partículas
-- Sons
-- Melhor sincronização multiplayer
+Suba os arquivos mantendo esta estrutura:
+
+```text
+index.html
+style.css
+firebase-rtdb-rules.json
+README.md
+js/firebase.js
+js/main.js
+```
+
+Depois abra o endereço do GitHub Pages. Não abra `index.html` com `file://`, porque módulos ES e Firebase podem ser bloqueados pelo navegador.
