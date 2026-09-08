@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>RPG 2D Online - Mundo Gigante</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0c;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: white;
+    }
+    #game-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas { display: block; }
+    
+    /* Interface do Usuário (HUD) */
+    #hud {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .hud-card {
+      background: rgba(15, 15, 25, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 16px;
+      border-radius: 8px;
+      backdrop-filter: blur(6px);
+      text-shadow: 1px 1px 3px #000;
+      font-size: 13px;
+    }
+
+    /* Hotbar de Inventário */
+    #hotbar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      background: rgba(10, 10, 15, 0.85);
+      padding: 8px;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(8px);
+    }
+    .slot {
+      width: 44px;
+      height: 44px;
+      border: 2px solid #444;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+      position: relative;
+      background: rgba(255, 255, 255, 0.05);
+      user-select: none;
+    }
+    .slot.active {
+      border-color: #00ffcc;
+      box-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+      background: rgba(0, 255, 204, 0.15);
+    }
+    .slot-num {
+      position: absolute;
+      top: 2px;
+      left: 4px;
+      font-size: 10px;
+      color: #aaa;
+    }
+    .block-preview {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+    }
+
+    /* Chat RP */
+    #chat-container {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 320px;
+      background: rgba(10, 10, 15, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px;
+      backdrop-filter: blur(6px);
+    }
+    #chat-messages {
+      height: 120px;
+      overflow-y: auto;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+    .chat-msg {
+      background: rgba(255,255,255,0.08);
+      padding: 4px 8px;
+      border-radius: 4px;
+      word-break: break-word;
+    }
+    #chat-input {
+      width: 100%;
+      background: rgba(0,0,0,0.6);
+      border: 1px solid #444;
+      color: white;
+      padding: 8px;
+      border-radius: 4px;
+      outline: none;
+      font-size: 12px;
+    }
+    #chat-input:focus { border-color: #00ffcc; }
+  </style>
+</head>
+<body>
+
+<div id="game-container">
+  <div id="hud">
+    <div class="hud-card">
+      <div style="font-weight: bold; color: #00ffcc; margin-bottom: 4px;">🎮 Controles RP</div>
+      <div><b>A / D:</b> Mover-se</div>
+      <div><b>W / ESPAÇO:</b> Pular</div>
+      <div><b>Botão Esquerdo:</b> Minerar Bloco</div>
+      <div><b>Botão Direito:</b> Colocar Bloco</div>
+      <div><b>Teclas 1 - 4:</b> Selecionar Bloco</div>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hotbar">
+    <div class="slot active" data-slot="1"><span class="slot-num">1</span><div class="block-preview" style="background:#4CAF50;"></div></div>
+    <div class="slot" data-slot="2"><span class="slot-num">2</span><div class="block-preview" style="background:#795548;"></div></div>
+    <div class="slot" data-slot="3"><span class="slot-num">3</span><div class="block-preview" style="background:#607D8B;"></div></div>
+    <div class="slot" data-slot="4"><span class="slot-num">4</span><div class="block-preview" style="background:#FF9800;"></div></div>
+  </div>
+
+  <div id="chat-container">
+    <div id="chat-messages"></div>
+    <input type="text" id="chat-input" placeholder="Pressione Enter para conversar no RP..." maxlength="60">
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getDatabase, ref, set, onValue, onDisconnect, push } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAYIO8f8f_ss7vVfpq4utm8SScnli0d4-c",
+    authDomain: "vila-shot.firebaseapp.com",
+    databaseURL: "https://vila-shot-default-rtdb.firebaseio.com",
+    projectId: "vila-shot",
+    storageBucket: "vila-shot.firebasestorage.app",
+    messagingSenderId: "513956353013",
+    appId: "1:513956353013:web:cc19d3a6ea5afd7138c6bc",
+    measurementId: "G-PC9D5X0PJN"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const playerId = 'player_' + Math.floor(Math.random() * 100000);
+  const playerColor = 'hsl(' + Math.floor(Math.random() * 360) + ', 80%, 60%)';
+  const playerRef = ref(db, 'world_players/' + playerId);
+  onDisconnect(playerRef).remove();
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  // Configuração do Mundo Gigante
+  const TILE_SIZE = 32;
+  const COLS = 200; // 200 Blocos de largura
+  const ROWS = 100; // 100 Blocos de profundidade
+  const SURFACE_LEVEL = 30;
+
+  // Tipos de bloco: 0=Ar, 1=Grama, 2=Terra, 3=Pedra, 4=Madeira
+  const worldMap = [];
+  function generateWorld() {
+    for (let r = 0; r < ROWS; r++) {
+      worldMap[r] = [];
+      for (let c = 0; c < COLS; c++) {
+        if (r < SURFACE_LEVEL) {
+          worldMap[r][c] = 0;
+        } else if (r === SURFACE_LEVEL) {
+          worldMap[r][c] = 1; // Grama
+        } else if (r < SURFACE_LEVEL + 12) {
+          worldMap[r][c] = 2; // Terra
+        } else {
+          worldMap[r][c] = 3; // Pedra
+        }
+      }
+    }
+  }
+  generateWorld();
+
+  // Câmera do Jogo
+  const camera = { x: 0, y: 0 };
+
+  // Jogador Local
+  const player = {
+    x: (COLS / 2) * TILE_SIZE,
+    y: (SURFACE_LEVEL - 3) * TILE_SIZE,
+    width: 22,
+    height: 38,
+    vx: 0,
+    vy: 0,
+    speed: 4.2,
+    jumpForce: -10,
+    grounded: false,
+    color: playerColor,
+    selectedBlock: 1,
+    chatMsg: '',
+    chatTimer: 0
+  };
+
+  const otherPlayers = {};
+  const keys = {};
+
+  // Controles
+  window.addEventListener('keydown', e => {
+    if (document.activeElement === document.getElementById('chat-input')) return;
+    keys[e.code] = true;
+
+    // Seleção de Hotbar por Teclado
+    if (e.code === 'Digit1') setSlot(1);
+    if (e.code === 'Digit2') setSlot(2);
+    if (e.code === 'Digit3') setSlot(3);
+    if (e.code === 'Digit4') setSlot(4);
+  });
+  window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+  // Seleção via clique na Hotbar
+  function setSlot(num) {
+    player.selectedBlock = num;
+    document.querySelectorAll('.slot').forEach((s, idx) => {
+      s.classList.toggle('active', idx + 1 === num);
+    });
+  }
+  document.querySelectorAll('.slot').forEach(s => {
+    s.addEventListener('click', () => setSlot(parseInt(s.dataset.slot)));
+  });
+
+  // Interação com o Mundo (Minerar / Colocar Blocos)
+  canvas.addEventListener('contextmenu', e => e.preventDefault()); // Desativa menu com botão direito
+  
+  canvas.addEventListener('mousedown', e => {
+    const worldMouseX = e.clientX + camera.x;
+    const worldMouseY = e.clientY + camera.y;
+
+    const c = Math.floor(worldMouseX / TILE_SIZE);
+    const r = Math.floor(worldMouseY / TILE_SIZE);
+
+    if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+      if (e.button === 0) {
+        // Botão Esquerdo: Quebrar Bloco
+        if (worldMap[r][c] !== 0) {
+          worldMap[r][c] = 0;
+          set(ref(db, `big_world/${r}_${c}`), 0);
+        }
+      } else if (e.button === 2) {
+        // Botão Direito: Colocar Bloco Escolhido
+        if (worldMap[r][c] === 0) {
+          worldMap[r][c] = player.selectedBlock;
+          set(ref(db, `big_world/${r}_${c}`), player.selectedBlock);
+        }
+      }
+    }
+  });
+
+  // Sincronização do Mundo via Firebase
+  onValue(ref(db, 'big_world'), snapshot => {
+    const data = snapshot.val() || {};
+    Object.keys(data).forEach(key => {
+      const [r, c] = key.split('_').map(Number);
+      if (r < ROWS && c < COLS) worldMap[r][c] = data[key];
+    });
+  });
+
+  // Sincronização de Jogadores via Firebase
+  onValue(ref(db, 'world_players'), snapshot => {
+    const data = snapshot.val() || {};
+    Object.keys(data).forEach(id => {
+      if (id !== playerId) otherPlayers[id] = data[id];
+    });
+    Object.keys(otherPlayers).forEach(id => {
+      if (!data[id]) delete otherPlayers[id];
+    });
+  });
+
+  // Chat RP
+  const chatInput = document.getElementById('chat-input');
+  const chatMessages = document.getElementById('chat-messages');
+
+  chatInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter' && chatInput.value.trim() !== '') {
+      const text = chatInput.value.trim();
+      push(ref(db, 'world_chat'), {
+        sender: playerId.slice(-4),
+        text: text,
+        color: player.color
+      });
+      player.chatMsg = text;
+      player.chatTimer = 200;
+      chatInput.value = '';
+      chatInput.blur();
+    }
+  });
+
+  onValue(ref(db, 'world_chat'), snapshot => {
+    chatMessages.innerHTML = '';
+    const data = snapshot.val() || {};
+    const msgs = Object.values(data).slice(-15);
+    msgs.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      div.innerHTML = `<span style="color:${m.color}"><b>[${m.sender}]:</b></span> ${m.text}`;
+      chatMessages.appendChild(div);
+    });
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  });
+
+  // Atualização de Física
+  function update() {
+    player.vx = 0;
+    if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -player.speed;
+    if (keys['KeyD'] || keys['ArrowRight']) player.vx = player.speed;
+
+    if ((keys['Space'] || keys['KeyW'] || keys['ArrowUp']) && player.grounded) {
+      player.vy = player.jumpForce;
+      player.grounded = false;
+    }
+
+    player.vy += 0.45; // Gravidade
+
+    player.x += player.vx;
+    checkCollisionX();
+
+    player.y += player.vy;
+    checkCollisionY();
+
+    if (player.chatTimer > 0) player.chatTimer--;
+
+    // Atualiza Posição da Câmera para Seguir o Jogador Suavemente
+    const targetCamX = player.x + player.width / 2 - canvas.width / 2;
+    const targetCamY = player.y + player.height / 2 - canvas.height / 2;
+    camera.x += (targetCamX - camera.x) * 0.1;
+    camera.y += (targetCamY - camera.y) * 0.1;
+
+    // Limites de Câmera nos Bordos do Mundo
+    camera.x = Math.max(0, Math.min(camera.x, COLS * TILE_SIZE - canvas.width));
+    camera.y = Math.max(0, Math.min(camera.y, ROWS * TILE_SIZE - canvas.height));
+
+    // Envia Dados do Jogador ao Firebase
+    set(playerRef, {
+      x: player.x,
+      y: player.y,
+      color: player.color,
+      chatMsg: player.chatTimer > 0 ? player.chatMsg : ''
+    });
+  }
+
+  function checkCollisionX() {
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (worldMap[r][c] !== 0) {
+          const tileX = c * TILE_SIZE;
+          const tileY = r * TILE_SIZE;
+          if (
+            player.x < tileX + TILE_SIZE &&
+            player.x + player.width > tileX &&
+            player.y < tileY + TILE_SIZE &&
+            player.y + player.height > tileY
+          ) {
+            if (player.vx > 0) player.x = tileX - player.width;
+            if (player.vx < 0) player.x = tileX + TILE_SIZE;
+          }
+        }
+      }
+    }
+  }
+
+  function checkCollisionY() {
+    player.grounded = false;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (worldMap[r][c] !== 0) {
+          const tileX = c * TILE_SIZE;
+          const tileY = r * TILE_SIZE;
+          if (
+            player.x < tileX + TILE_SIZE &&
+            player.x + player.width > tileX &&
+            player.y < tileY + TILE_SIZE &&
+            player.y + player.height > tileY
+          ) {
+            if (player.vy > 0) {
+              player.y = tileY - player.height;
+              player.vy = 0;
+              player.grounded = true;
+            } else if (player.vy < 0) {
+              player.y = tileY + TILE_SIZE;
+              player.vy = 0;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Renderização
+  function render() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Renderiza Fundo (Céu / Caverna)
+    const skyGradient = ctx.createLinearGradient(0, -camera.y, 0, (SURFACE_LEVEL * TILE_SIZE) - camera.y);
+    skyGradient.addColorStop(0, '#1a385c');
+    skyGradient.addColorStop(1, '#6ba3d6');
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+
+    // Otimização: Renderiza apenas blocos visíveis na tela
+    const startCol = Math.max(0, Math.floor(camera.x / TILE_SIZE));
+    const endCol = Math.min(COLS, Math.ceil((camera.x + canvas.width) / TILE_SIZE));
+    const startRow = Math.max(0, Math.floor(camera.y / TILE_SIZE));
+    const endRow = Math.min(ROWS, Math.ceil((camera.y + canvas.height) / TILE_SIZE));
+
+    for (let r = startRow; r < endRow; r++) {
+      for (let c = startCol; c < endCol; c++) {
+        const type = worldMap[r][c];
+        if (type !== 0) {
+          if (type === 1) ctx.fillStyle = '#4CAF50'; // Grama
+          else if (type === 2) ctx.fillStyle = '#795548'; // Terra
+          else if (type === 3) ctx.fillStyle = '#607D8B'; // Pedra
+          else if (type === 4) ctx.fillStyle = '#FF9800'; // Madeira
+          
+          ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+          ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        }
+      }
+    }
+
+    // Desenha outros jogadores
+    Object.keys(otherPlayers).forEach(id => {
+      const p = otherPlayers[id];
+      drawPlayer(p.x, p.y, p.color, id.slice(-4), p.chatMsg);
+    });
+
+    // Desenha jogador local
+    drawPlayer(player.x, player.y, player.color, 'Você', player.chatTimer > 0 ? player.chatMsg : '');
+
+    ctx.restore();
+  }
+
+  function drawPlayer(x, y, color, label, speech) {
+    // Sombra
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(x + player.width/2, y + player.height, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Corpo
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, player.width, player.height);
+
+    // Olhos
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(x + 4, y + 8, 5, 5);
+    ctx.fillRect(x + 13, y + 8, 5, 5);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(x + 7, y + 10, 2, 2);
+    ctx.fillRect(x + 16, y + 10, 2, 2);
+
+    // Nome
+    ctx.fillStyle = '#FFF';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = '#000';
+    ctx.fillText(label, x + player.width / 2, y - 8);
+    ctx.shadowBlur = 0;
+
+    // Balão de Chat RP
+    if (speech) {
+      ctx.font = '12px sans-serif';
+      const textWidth = ctx.measureText(speech).width;
+      ctx.fillStyle = 'rgba(15, 15, 20, 0.9)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(x + player.width / 2 - textWidth / 2 - 8, y - 36, textWidth + 16, 22);
+      ctx.strokeRect(x + player.width / 2 - textWidth / 2 - 8, y - 36, textWidth + 16, 22);
+      ctx.fillStyle = '#FFF';
+      ctx.fillText(speech, x + player.width / 2, y - 21);
+    }
+  }
+
+  function loop() {
+    update();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+</script>
+
+</body>
+</html>
