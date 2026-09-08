@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Vila RP — Pixel World</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud">
+  <div class="brand">VILA <span>RP</span></div>
+  <div class="hud-left">
+    <div class="pill">♥ <b id="hp">100</b>/100</div>
+    <div class="pill">☀ <b id="clock">12:00</b></div>
+    <div class="pill biome" id="biome">Planície</div>
+  </div>
+  <div class="hud-right">
+    <button class="iconBtn" id="playersBtn">👥 <b id="online">1</b></button>
+    <button class="iconBtn" id="chatBtn">💬</button>
+    <button class="iconBtn" id="saveBtn">💾</button>
+  </div>
+</div>
+
+<div id="crosshair">+</div>
+<div id="toast"></div>
+
+<div id="inventory" class="panel hidden">
+  <div class="panel-title">INVENTÁRIO <button class="close" data-close="inventory">×</button></div>
+  <div id="inventoryGrid"></div>
+  <div class="craft-title">CRIAÇÃO RÁPIDA</div>
+  <div id="recipes"></div>
+</div>
+
+<div id="playersPanel" class="panel side hidden">
+  <div class="panel-title">JOGADORES ONLINE <button class="close" data-close="playersPanel">×</button></div>
+  <div id="playersList"></div>
+</div>
+
+<div id="chatPanel" class="panel chat hidden">
+  <div class="panel-title">CHAT GLOBAL <button class="close" data-close="chatPanel">×</button></div>
+  <div id="messages"></div>
+  <form id="chatForm"><input id="chatInput" maxlength="160" placeholder="Digite uma mensagem..."><button>Enviar</button></form>
+</div>
+
+<div id="login" class="modal">
+  <div class="login-card">
+    <div class="logo">VILA RP</div>
+    <p>Um mundo pixel online. Explore, construa e sobreviva.</p>
+    <input id="username" maxlength="16" placeholder="Seu nome">
+    <input id="password" type="password" minlength="6" placeholder="Senha (6+ caracteres)">
+    <div class="login-actions">
+      <button id="loginBtn">Entrar / Criar conta</button>
+      <button id="guestBtn" class="secondary">Jogar como visitante</button>
+    </div>
+    <small>Contas usam Firebase Authentication. Ative "E-mail/senha" no Firebase para login persistente.</small>
+  </div>
+</div>
+
+<div id="mobileControls">
+  <div class="dpad">
+    <button data-key="ArrowLeft">◀</button><button data-key="ArrowRight">▶</button>
+    <button data-key="Space">▲</button>
+  </div>
+  <div class="touch-actions">
+    <button id="breakBtn">⛏</button><button id="placeBtn">🧱</button><button id="invBtn">🎒</button>
+  </div>
+</div>
+
+<div id="hotbar"></div>
+<div id="help">A/D ou ←/→ mover • Espaço pular • Clique esquerdo quebrar • Direito colocar • E inventário</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

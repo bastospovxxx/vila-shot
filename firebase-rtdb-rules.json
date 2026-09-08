@@ -1,0 +1,18 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "players": {
+      "$uid": {
+        ".write": "$uid === auth.uid || $uid.startsWith('anon-')",
+        ".read": true
+      }
+    },
+    "chat": {
+      ".read": true,
+      "$message": {
+        ".write": "auth != null"
+      }
+    }
+  }
+}
